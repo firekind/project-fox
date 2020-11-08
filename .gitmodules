@@ -1,3 +1,6 @@
 [submodule "eva5_final/midas"]
 	path = eva5_final/midas
 	url = https://github.com/firekind/MiDaS
+[submodule "eva5_final/yolov3"]
+	path = eva5_final/yolov3
+	url = https://github.com/firekind/yolov3
