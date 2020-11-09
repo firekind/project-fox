@@ -1,9 +1,12 @@
 import torch
-from midas.midas.midas_net import MidasNet
+from .model import Model
+from .config import MidasConfig, YoloV3Config
+from torchsummary import summary
 
-net = MidasNet("../weights/midas.pt")
+def something():
+    net = Model(MidasConfig, YoloV3Config)
+    
+    if torch.cuda.is_available():
+        net = net.cuda()
 
-l2, l3, l4, out = net(torch.randn(1, 3, 416, 416))
-print(l2.shape)
-print(l3.shape)
-print(l4.shape)
+    print(summary(net, (3, 416, 416)))
