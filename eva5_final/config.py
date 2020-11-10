@@ -1,14 +1,17 @@
+from typing import Tuple
+
+import os
 from dataclasses import dataclass
 
 
 @dataclass
 class YoloV3Options:
-    data: str
+    data: str = "data/yolo/custom.data"
     multi_scale: bool = False  # adjust (67% - 150%) img_size every 10 batches
     epochs: int = 300
     batch_size: int = 16
     cfg: str = "config/yolov3-spp-detector.cfg"
-    img_size = [320, 640, 640]  # [min_train, max-train, test]
+    img_size: Tuple[int, int, int] = (320, 640, 640)  # [min_train, max-train, test]
     rect: bool = False  # rectangular training
     resume: bool = False  # resume training from last.pt
     nosave: bool = False  # only save final checkpoint
@@ -22,20 +25,26 @@ class YoloV3Options:
     adam: bool = False  # use adam optimizer
     single_cls: bool = False  # train as single-class dataset
     freeze_layers: bool = False  # Freeze non-output layers
-    gr: float = 1.0 # giou loss ratio (obj_loss = 1.0 or giou)
+    gr: float = 1.0  # giou loss ratio (obj_loss = 1.0 or giou)
     conf_thres: float = 0.001
-    iou_thres: float = 0.6 # for nms
+    iou_thres: float = 0.6  # for nms
+    mosiac: bool = False  # apply recap kind of augmentation
+
 
 class GlobalConfig:
     EPOCHS = 100
     BATCH_SIZE = 16
+    DATA_DIR = "data"
+    IMG_SIZE = 64
+    MIN_IMG_SIZE = 64 # used in yolo
 
-class MidasConfig(GlobalConfig):
+
+class MidasConfig:
     WEIGHTS_PATH = "weights/midas.pt"
     FREEZE = True
 
 
-class YoloV3Config(GlobalConfig):
+class YoloV3Config:
     HEAD_CONFIG_PATH = "config/yolov3-head.cfg"
     DETECTOR_CONFIG_PATH = "config/yolov3-spp-detector.cfg"
     DETECTOR_WEIGHTS_PATH = "weights/yolo-detector.pt"
@@ -61,5 +70,13 @@ class YoloV3Config(GlobalConfig):
         "shear": 0.641 * 0,  # image shear (+/- deg)
     }
 
-    OPTIONS = YoloV3Options('data dir', epochs=GlobalConfig.EPOCHS)
+    opt = YoloV3Options(
+        os.path.join(GlobalConfig.DATA_DIR, "yolo", "custom.data"),
+        epochs=GlobalConfig.EPOCHS,
+        img_size = (GlobalConfig.MIN_IMG_SIZE, GlobalConfig.IMG_SIZE, GlobalConfig.IMG_SIZE)
+    )
 
+
+class Config(GlobalConfig):
+    yolo_config = YoloV3Config
+    midas_config = MidasConfig

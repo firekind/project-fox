@@ -75,7 +75,7 @@ class Model(pl.LightningModule):
 
         # creating detector
         self.yolo_detector = Darknet(yolo_config.DETECTOR_CONFIG_PATH)
-        self.yolo_detector.gr = yolo_config.gr
+        self.yolo_detector.gr = yolo_config.opt.gr
         self.yolo_detector.hyp = yolo_config.hyp
         self.yolo_detector.nc = nc
         self.yolo_detector.class_weights = labels_to_class_weights(yolo_labels, nc)
@@ -115,21 +115,21 @@ class Model(pl.LightningModule):
 
     def configure_optimizers(self):
         lf = (
-            lambda x: (((1 + np.cos(x * np.pi / self.epochs)) / 2) ** 1.0) * 0.95 + 0.05
+            lambda x: (((1 + np.cos(x * np.pi / self.config.EPOCHS)) / 2) ** 1.0) * 0.95 + 0.05
         )  # cosine
         yolo_scheduler = LambdaLR(self.yolo_optim, lr_lambda=lf)
 
         return [self.yolo_optim,], [yolo_scheduler,]
 
     def training_step(self, batch, batch_idx):
-        img, midas_data, yolo_data, planercnn_data = batch
+        imgs, midas_data, yolo_data, planercnn_data = batch
 
         self.yolo_trainer.pre_train_step(
             yolo_data, batch_idx, self.current_epoch
         )  # ignoring multi-scale changes (returned by pre_train_step)
 
         # forward prop
-        midas_out, yolo_out, planercnn_out = self(img)
+        midas_out, yolo_out, planercnn_out = self(imgs)
 
         yolo_loss = self.yolo_trainer.post_train_step(
             yolo_out, yolo_data, batch_idx, self.current_epoch
@@ -139,7 +139,7 @@ class Model(pl.LightningModule):
 
         # return loss
         return {
-            # "loss": loss,
+            "loss": yolo_loss, # yolo loss for now
             "yolo_loss": yolo_loss
         }
 
@@ -155,24 +155,24 @@ class Model(pl.LightningModule):
         self.yolo_trainer.validation_epoch_start()
 
     def validation_step(self, batch, batch_idx):
-        img, midas_data, yolo_data, planercnn_data = batch
-        midas_out, yolo_out, planercnn_out = self(img)
+        imgs, midas_data, yolo_data, planercnn_data = batch
+        midas_out, yolo_out, planercnn_out = self(imgs)
 
         #############################
         # YoloV3
         #############################
-        yolo_loss = self.yolo_trainer.validation_step(
+        yolo_losses = self.yolo_trainer.validation_step(
             self.config.yolo_config.opt,
             yolo_out,
             yolo_data,
             batch_idx,
             self.current_epoch,
         )
-        self.log("yolo_val_loss", yolo_loss)
+        self.log("yolo_val_loss", yolo_losses.sum())
         
         return {
             # loss: loss,
-            'yolo_val_loss': yolo_loss
+            'yolo_val_losses': yolo_losses
         }
 
     def validation_epoch_end(self, outputs: List[Any]) -> None:
@@ -182,7 +182,7 @@ class Model(pl.LightningModule):
 
         # `mAPs` is avg. precision for each class, `mAP` is total mAP
         (mp, mr, mAP, mf1), mAPs = self.yolo_trainer.validation_epoch_end()
-        avg_yolo_val_loss = np.mean([d['yolo_val_loss'] for d in outputs])
+        avg_yolo_val_loss = np.mean([d['yolo_val_losses'].sum() for d in outputs])
 
         # log stuff
         self.log("avg yolo val loss", avg_yolo_val_loss, prog_bar=True)
