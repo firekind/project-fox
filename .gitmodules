@@ -7,3 +7,4 @@
 [submodule "eva5_final/planercnn"]
 	path = eva5_final/planercnn
 	url = https://github.com/firekind/planercnn
+	branch = eva5
