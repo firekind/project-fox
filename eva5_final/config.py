@@ -3,6 +3,8 @@ from typing import Tuple
 import os
 from dataclasses import dataclass
 
+from .planercnn.config import Config as _Config
+
 
 @dataclass
 class YoloV3Options:
@@ -31,12 +33,42 @@ class YoloV3Options:
     mosiac: bool = False  # apply recap kind of augmentation
 
 
+@dataclass
+class PlaneRCNNOptions:
+    numEpochs: int
+    batchSize: int
+    gpu: int = 1
+    task: str = "train"  # [train, test, predict]
+    anchorFolder: str = "eva5_final/planercnn/anchors"
+    LR: float = 1e-5
+    heatmapThreshold: float = 0.5
+    distanceThreshold3D: float = 0.2
+    distanceThreshold2D: float = 20.0
+    width: int = 640
+    height: int = 512
+    suffix: str = "warping_refine"
+    maskWidth: int = 56
+    maskHeight: int = 56
+    anchorType: str = "normal"
+    numAnchorPlanes: int = 0
+    frameGap: int = 20
+    planeAreaThreshold: int = 500  # probably not used
+    planeWidthThreshold: int = 10  # probably not used
+    scaleMode: str = "variant"
+    cornerPositiveWeight: int = 0
+    positiveWeight: float = 0.33
+    maskWeight: int = 1
+    warpingWeight: float = 0.1
+    convType: str = "2"
+    dataset: str = '' # used in planercnn's config
+
+
 class GlobalConfig:
     EPOCHS = 100
     BATCH_SIZE = 16
     DATA_DIR = "data"
     IMG_SIZE = 64
-    MIN_IMG_SIZE = 64 # used in yolo
+    MIN_IMG_SIZE = 64  # used in yolo
 
 
 class MidasConfig:
@@ -73,10 +105,30 @@ class YoloV3Config:
     opt = YoloV3Options(
         os.path.join(GlobalConfig.DATA_DIR, "yolo", "custom.data"),
         epochs=GlobalConfig.EPOCHS,
-        img_size = (GlobalConfig.MIN_IMG_SIZE, GlobalConfig.IMG_SIZE, GlobalConfig.IMG_SIZE)
+        img_size=(
+            GlobalConfig.MIN_IMG_SIZE,
+            GlobalConfig.IMG_SIZE,
+            GlobalConfig.IMG_SIZE,
+        ),
     )
+
+
+class PlaneRCNNConfig(_Config):
+    EXTERNAL_EXTRACTOR = True
+    NUM_CLASSES = 4
+    GPU_COUNT = 1
+    INIT_LOG_DIR_AND_WEIGHTS = False # preventing planercnn model from making a log directory and loading weights
+    MODEL_WEIGHTS_PATH = "weights/planercnn/checkpoint-partial.pth"
+    REFINE_MODEL_WEIGHTS_PATH = "weights/planercnn/checkpoint-refine.pth"
+    options = PlaneRCNNOptions(
+        numEpochs=GlobalConfig.EPOCHS, batchSize=GlobalConfig.BATCH_SIZE
+    )
+
+    def __init__(self):
+        super(PlaneRCNNConfig, self).__init__(PlaneRCNNConfig.options)
 
 
 class Config(GlobalConfig):
     yolo_config = YoloV3Config
     midas_config = MidasConfig
+    planercnn_config = PlaneRCNNConfig()
