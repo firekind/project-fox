@@ -183,7 +183,6 @@ class Model(pl.LightningModule):
             gt_parameters,
             _,  # gt_depth,
             _,  # extrinsics,
-            _,  # gt_plane,
             _,  # gt_segmentation,
             camera,
         ) = planercnn_data

@@ -1,4 +1,6 @@
+import os
 import re
+from pathlib import Path
 from typing import Union, Dict
 import torch
 
@@ -47,3 +49,26 @@ def extract_weights_from_checkpoint(
 
     data = {k: v for k, v in inp.items() if exclude_matched ^ bool(re.match(regex, k))}
     torch.save(data, dest)
+
+
+def parse_data_cfg(path):
+    # Parses the data configuration file
+    with open(path, 'r') as f:
+        lines = f.readlines()
+
+    options = dict()
+    for line in lines:
+        line = line.strip()
+        if line == '' or line.startswith('#'):
+            continue
+        key, val = line.split('=')
+        val = val.strip()
+
+        if val.startswith('./'):
+            val = val.replace("./", str(Path(path).parent) + os.sep)
+        elif val.startswith('../'):
+            val = val.replace("../", str(Path(os.path.abspath(path)).parent.parent) + os.sep)
+
+        options[key.strip()] = val
+
+    return options
