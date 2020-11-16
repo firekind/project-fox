@@ -150,7 +150,7 @@ class Model(pl.LightningModule):
             ) = planercnn_data
             planercnn_out = self.planercnn_model.predict(
                 [
-                    x,
+                    [l1, l2, l3, l4],
                     image_metas,
                     gt_class_ids,
                     gt_boxes,
@@ -162,7 +162,6 @@ class Model(pl.LightningModule):
                 use_nms=2,
                 use_refinement="refinement"
                 in self.config.planercnn_config.options.suffix,
-                extractor_stages=[l1, l2, l3, l4],
             )
         else:  # during validation_step
             planercnn_out = None
@@ -172,8 +171,9 @@ class Model(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         # getting data
         imgs, midas_data, yolo_data, planercnn_data = batch
+
         (
-            _,  # images,
+            imgs,  # images,
             image_metas,
             _,  # rpn_match,
             _,  # rpn_bbox,
@@ -186,7 +186,6 @@ class Model(pl.LightningModule):
             _,  # gt_segmentation,
             camera,
         ) = planercnn_data
-
         # before forward prop
         self.yolo_trainer.pre_train_step(
             yolo_data, batch_idx, self.current_epoch
@@ -194,7 +193,7 @@ class Model(pl.LightningModule):
 
         # forward prop
         midas_out, yolo_out, planercnn_out = self(
-            imgs, [image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera]
+            imgs, [image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera[0]]
         )
 
         # after forward prop
@@ -203,7 +202,7 @@ class Model(pl.LightningModule):
         )
 
         planercnn_loss = self.planercnn_trainer.train_step(
-            planercnn_data, planercnn_out
+            [*planercnn_data[:-1], planercnn_data[-1].squeeze(0)], planercnn_out, device=self.device
         )
 
         # logging
@@ -212,18 +211,17 @@ class Model(pl.LightningModule):
 
         # return loss
         return {
-            "loss": yolo_loss,  # TODO: use proper loss. yolo loss for now
-            "yolo_loss": yolo_loss,
-            "planercnn_loss": planercnn_loss,
+            "loss": planercnn_loss,  # TODO: use proper loss.
+            "yolo_loss": yolo_loss.detach().cpu().numpy(),
+            "planercnn_loss": planercnn_loss.detach().cpu().numpy(),
         }
 
     def training_epoch_end(self, outputs: List[Any]) -> None:
         self.yolo_trainer.train_epoch_end()
         avg_yolo_loss = np.mean([d["yolo_loss"] for d in outputs])
+        self.log("avg yolo loss", avg_yolo_loss, prog_bar=True)
 
         avg_planercnn_loss = np.mean([d["planercnn_loss"] for d in outputs])
-
-        self.log("avg yolo loss", avg_yolo_loss, prog_bar=True)
         self.log("avg planercnn loss", avg_planercnn_loss, prog_bar=True)
 
     def on_validation_epoch_start(self) -> None:
@@ -247,7 +245,7 @@ class Model(pl.LightningModule):
 
         return {
             # loss: loss,
-            "yolo_val_losses": yolo_losses
+            "yolo_val_losses": yolo_losses.cpu().numpy()
         }
 
     def validation_epoch_end(self, outputs: List[Any]) -> None:

@@ -140,7 +140,8 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
                     plane_normals[plane_idx]
                     - self.config.ANCHOR_NORMALS[normal_anchors[plane_idx]]
                 )
-                parameters.append(np.concatenate([normal, np.zeros(1)], axis=0))
+                # parameters.append(np.concatenate([normal, np.zeros(1)], axis=0))
+                parameters.append(normal)
             else:
                 raise NotImplementedError(
                     f"{self.config.ANCHOR_TYPE} is not supported yet."
@@ -151,7 +152,7 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
 
         class_ids = np.array(class_ids, dtype=np.int32)
         depth = np.zeros(
-            (self.config.IMAGE_MIN_DIM, self.config.IMAGE_MAX_DIM), dtype=np.float32
+            (self.config.IMAGE_MAX_DIM, self.config.IMAGE_MAX_DIM), dtype=np.float32
         )  # dummy, not used
 
         (
@@ -171,6 +172,7 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
             parameters,
             augment=self.split == "train",
         )
+
         ## RPN Targets
         rpn_match, rpn_bbox = build_rpn_targets(
             image.shape, self.anchors, gt_class_ids, gt_boxes, self.config
@@ -220,7 +222,6 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.samples)
-
 
 def load_image_gt(
     config,
