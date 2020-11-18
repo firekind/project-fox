@@ -73,6 +73,7 @@ class GlobalConfig:
 
 class MidasConfig:
     WEIGHTS_PATH = "weights/midas.pt"
+    DATA_PATH = "data/midas/custom.data"
     FREEZE = True
 
 

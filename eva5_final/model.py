@@ -1,3 +1,4 @@
+import enum
 from typing import Any, List
 
 import numpy as np
@@ -140,24 +141,9 @@ class Model(pl.LightningModule):
 
         if planercnn_data is not None:
             # forward proping planercnn's maskrcnn
-            (
-                image_metas,
-                gt_class_ids,
-                gt_boxes,
-                gt_masks,
-                gt_parameters,
-                camera,
-            ) = planercnn_data
-            planercnn_out = self.planercnn_model.predict(
-                [
-                    [l1, l2, l3, l4],
-                    image_metas,
-                    gt_class_ids,
-                    gt_boxes,
-                    gt_masks,
-                    gt_parameters,
-                    camera,
-                ],
+            planercnn_out = self.planercnn_model.predict_on_batch(
+                [l1, l2, l3, l4],
+                planercnn_data,
                 mode="training_detection",
                 use_nms=2,
                 use_refinement="refinement"
@@ -172,6 +158,11 @@ class Model(pl.LightningModule):
         # getting data
         imgs, midas_data, yolo_data, planercnn_data = batch
 
+        # transfering planercnn data to device
+        for i, sample in enumerate(planercnn_data):
+            for j, data in enumerate(sample):
+                planercnn_data[i][j] = data.to(self.device)
+        
         (
             imgs,  # images,
             image_metas,
@@ -185,7 +176,7 @@ class Model(pl.LightningModule):
             _,  # extrinsics,
             _,  # gt_segmentation,
             camera,
-        ) = planercnn_data
+        ) = zip(*planercnn_data)
         # before forward prop
         self.yolo_trainer.pre_train_step(
             yolo_data, batch_idx, self.current_epoch
@@ -193,7 +184,7 @@ class Model(pl.LightningModule):
 
         # forward prop
         midas_out, yolo_out, planercnn_out = self(
-            imgs, [image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera[0]]
+            torch.cat(imgs, 0), list(zip(image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera))
         )
 
         # after forward prop
@@ -201,9 +192,10 @@ class Model(pl.LightningModule):
             yolo_out, yolo_data, batch_idx, self.current_epoch
         )
 
-        planercnn_loss = self.planercnn_trainer.train_step(
-            [*planercnn_data[:-1], planercnn_data[-1].squeeze(0)], planercnn_out, device=self.device
+        planercnn_losses = self.planercnn_trainer.train_step_on_batch(
+            planercnn_data, planercnn_out, device=self.device
         )
+        planercnn_loss = sum(planercnn_losses)
 
         # logging
         self.log("yolo loss", yolo_loss, prog_bar=True)
@@ -228,8 +220,8 @@ class Model(pl.LightningModule):
         self.yolo_trainer.validation_epoch_start()
 
     def validation_step(self, batch, batch_idx):
-        imgs, midas_data, yolo_data, _ = batch
-        midas_out, yolo_out, _ = self(imgs)
+        imgs, _, yolo_data, _ = batch
+        _, yolo_out, _ = self(imgs)
 
         #############################
         # YoloV3

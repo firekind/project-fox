@@ -1,20 +1,24 @@
 import os
 
-import torch
+import cv2
 import numpy as np
-from eva5_final.yolov3.utils.datasets import LoadImagesAndLabels as YoloDataset
-from eva5_final.yolov3.utils.datasets import letterbox
-from eva5_final.yolov3.utils.parse_config import parse_data_cfg
+import torch
+from torchvision.datasets.folder import pil_loader
+import albumentations as A
+from athena.utils.transforms import ToTensor
+
+import eva5_final.planercnn.utils as utils
 from eva5_final.planercnn.visualize_utils import image_to_mask
 from eva5_final.utils import parse_data_cfg
-import eva5_final.planercnn.utils as utils
-from torchvision.datasets.folder import pil_loader
-import cv2
+from eva5_final.yolov3.utils.datasets import LoadImagesAndLabels as YoloDataset
+from eva5_final.yolov3.utils.datasets import letterbox
+from eva5_final.yolov3.utils.parse_config import parse_data_cfg as parse_yolo_data_cfg
+from eva5_final.midas.midas.transforms import Resize, NormalizeImage, PrepareForNet
 
 
 class ComboDataset(YoloDataset):
     def __init__(self, config, train=True):
-        data_dict = parse_data_cfg(config.yolo_config.opt.data)
+        data_dict = parse_yolo_data_cfg(config.yolo_config.opt.data)
         YoloDataset.__init__(
             self,
             data_dict["train"] if train else data_dict["valid"],
@@ -102,6 +106,7 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         image = cv2.imread(self.samples[index][0])
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         seg_img = cv2.imread(self.samples[index][1])
         planes = np.load(self.samples[index][2])
         segmentation = image_to_mask(seg_img, planes.shape[0])
@@ -201,7 +206,7 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
             ],
             axis=0,
         )
-        extrinsics = np.eye(4, dtype=np.float32) # dummy, hopefully wont cause issues.
+        extrinsics = np.eye(4, dtype=np.float32)  # dummy, hopefully wont cause issues.
 
         info = [
             image.transpose((2, 0, 1)).astype(np.float32),
@@ -222,6 +227,56 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.samples)
+
+    def collate_fn(self, batch):
+        for i, sample in enumerate(batch):
+            for j, data in enumerate(sample):
+                if j != len(sample) - 1: # avoiding unsqueezing camera
+                    batch[i][j] = torch.from_numpy(data).unsqueeze(0)
+                else:
+                    batch[i][j] = torch.from_numpy(data)
+
+        return batch
+
+
+class MidasDataset(torch.utils.data.Dataset):
+    def __init__(self, config):
+        self.config = config.midas_config
+
+        data_dict = parse_data_cfg(self.config.DATA_PATH)
+        self.depth_path = data_dict["depth"]
+        self.images_path = data_dict["images"]
+
+        self.samples = []
+        for f in os.listdir(self.images_path):
+            image_path = os.path.join(self.images_path, f)
+            depth_path = os.path.join(self.depth_path, os.path.splitext(f)[0] + ".png")
+            self.samples.append((image_path, depth_path))
+
+        self.transform = A.Compose([
+            A.Resize(config.IMG_SIZE, config.IMG_SIZE),
+            A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225], max_pixel_value=1),
+            A.Lambda(ToTensor, name="ToTensor"),
+        ])
+
+        self.depth_transform = A.Compose([
+            A.Resize(config.IMG_SIZE, config.IMG_SIZE),
+            A.Lambda(ToTensor, name="ToTensor"),
+        ])
+
+    def __getitem__(self, index):
+        img = np.array(pil_loader(self.samples[index][0]), dtype=np.float32) / 255.
+        img = self.transform(image=img)["image"]
+
+        depth = cv2.imread(self.samples[index][1]).astype(np.float32) / 255.
+        depth = cv2.cvtColor(depth, cv2.COLOR_BGR2RGB)
+        depth = self.depth_transform(image=depth)["image"]
+
+        return img, depth
+
+    def __len__(self):
+        return len(self.samples)
+
 
 def load_image_gt(
     config,
