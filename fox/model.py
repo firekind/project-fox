@@ -310,7 +310,7 @@ class Model(pl.LightningModule):
         avg_midas_loss = np.mean([d["midas_loss"] for d in outputs])
         self.log("avg midas loss", avg_midas_loss, prog_bar=True)
 
-        avg_total_loss = np.mean(d["loss"].detach().cpu().numpy() for d in outputs)
+        avg_total_loss = np.mean([d["loss"].detach().cpu().numpy() for d in outputs])
         self.log("avg total loss", avg_total_loss, prog_bar=True)
 
     def on_validation_epoch_start(self) -> None:
