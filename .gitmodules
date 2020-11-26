@@ -1,0 +1,10 @@
+[submodule "fox/planercnn"]
+	path = fox/planercnn
+	url = https://github.com/firekind/planercnn
+	branch = eva5
+[submodule "fox/midas"]
+	path = fox/midas
+	url = https://github.com/firekind/midas
+[submodule "fox/yolov3"]
+	path = fox/yolov3
+	url = https://github.com/firekind/yolov3

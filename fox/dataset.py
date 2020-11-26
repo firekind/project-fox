@@ -8,11 +8,11 @@ from athena.utils.transforms import ToTensor, ToNumpy
 from torch.utils.data.dataloader import default_collate
 from torchvision.datasets.folder import pil_loader
 
-import eva5_final.planercnn.utils as utils
-from eva5_final.planercnn.visualize_utils import image_to_mask
-from eva5_final.utils import parse_data_cfg
-from eva5_final.yolov3.utils.datasets import LoadImagesAndLabels as YoloDataset
-from eva5_final.yolov3.utils.parse_config import parse_data_cfg as parse_yolo_data_cfg
+import fox.planercnn.utils as utils
+from fox.planercnn.visualize_utils import image_to_mask
+from fox.utils import parse_data_cfg
+from fox.yolov3.utils.datasets import LoadImagesAndLabels as YoloDataset
+from fox.yolov3.utils.parse_config import parse_data_cfg as parse_yolo_data_cfg
 
 
 class PlaneRCNNDataset(torch.utils.data.Dataset):
