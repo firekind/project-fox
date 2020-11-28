@@ -1,5 +1,5 @@
 import enum
-from typing import Any, List
+from typing import Any, List, Callable, Optional
 
 import numpy as np
 import pytorch_lightning as pl
@@ -7,6 +7,7 @@ import torch
 from torch.nn.modules.batchnorm import BatchNorm2d
 import torch.optim as optim
 import torch.nn as nn
+from torch.optim import Optimizer
 from torch.optim.lr_scheduler import LambdaLR
 
 from .losses import rmse_loss
@@ -215,7 +216,7 @@ class Model(pl.LightningModule):
                 planercnn_data[i][j] = data.to(self.device)
 
         (
-            imgs,  # images,
+            _,  # images,
             image_metas,
             _,  # rpn_match,
             _,  # rpn_bbox,
@@ -231,14 +232,14 @@ class Model(pl.LightningModule):
 
         # forward prop
         midas_out, yolo_out, planercnn_out = self(
-            torch.cat(imgs, 0),
+            imgs,
             zip(image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera)
             if self.config.USE_PLANERCNN
             else None,
         )
 
         # after forward prop (yolo loss)
-        yolo_loss = (
+        yolo_loss, yolo_loss_items = (
             self.yolo_trainer.post_train_step(
                 yolo_out, yolo_data, batch_idx, self.current_epoch
             )
@@ -271,6 +272,14 @@ class Model(pl.LightningModule):
             + self.config.YOLO_LOSS_WEIGHT * yolo_loss
             + self.config.PLANERCNN_LOSS_WEIGHT * planercnn_loss
         )
+
+        self.manual_backward(loss, self.optimizers())
+
+        if self.config.USE_YOLO:
+            if self.yolo_trainer.calc_ni(batch_idx, self.current_epoch) % self.yolo_trainer.accumulate:
+                    self.optimizers().step()
+                    self.optimizers().zero_grad()
+                    self.yolo_trainer.update_ema()
 
         # logging
         self.log("total loss", loss, prog_bar=True)
@@ -349,6 +358,7 @@ class Model(pl.LightningModule):
             # `mAPs` is avg. precision for each class, `mAP` is total mAP
             (mp, mr, mAP, mf1), mAPs = self.yolo_trainer.validation_epoch_end()
             avg_yolo_val_loss = np.mean([d["yolo_val_losses"].sum() for d in outputs])
+            print(mAP)
 
             # log stuff
             self.log("avg yolo val loss", avg_yolo_val_loss, prog_bar=True)
