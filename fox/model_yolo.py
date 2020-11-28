@@ -69,19 +69,8 @@ class YoloPart(nn.Module):
         self.ema = ModelEMA(self)
 
     def forward(self, x):
-        if self.training:
-            yolo_head_out = self.yolo_head(x)
-            return self.yolo_detector(yolo_head_out, x)
-        else:
-            yolo_head_out = self.ema.ema.yolo_head(x)
-            return self.ema.ema.yolo_detector(yolo_head_out, x)
-
-    def update_attr(self):
-        self.ema.update_attr(self)
-
-    def update_ema(self):
-        self.ema.update(self)
-
+        yolo_head_out = self.yolo_head(x)
+        return self.yolo_detector(yolo_head_out, x)
 
 class PlaneRCNNHeadSegment(nn.Module):
     def __init__(self, in_channels, factor):
@@ -174,12 +163,15 @@ class Model(pl.LightningModule):
 
             # creating trainer
             self.yolo_trainer = YoloTrainer(
-                self.yolo_detector,
+                self.yolo_part.yolo_detector,
                 yolo_config.hyp,
                 yolo_config.opt,
                 nb,  # number of batches
                 nc,
             )
+
+            self.yolo_ema = ModelEMA(self.yolo_part)
+            self.is_yolo_ema_on_device = False
 
     def forward(self, x):
         # forward proping midas
@@ -187,8 +179,13 @@ class Model(pl.LightningModule):
 
         # forward proping yolo
         if self.config.USE_YOLO:
-            yolo_head_out = self.yolo_head(l2)
-            yolo_out = self.yolo_detector(yolo_head_out, l2)
+            if self.training:
+                yolo_out = self.yolo_part(l2)
+            else:
+                if not self.is_yolo_ema_on_device:
+                    self.yolo_ema.ema = self.yolo_ema.ema.to(self.device)
+                    self.is_yolo_ema_on_device = True
+                yolo_out = self.yolo_ema.ema(l2)
         else:
             yolo_out = None
 
@@ -242,7 +239,7 @@ class Model(pl.LightningModule):
 
     def training_epoch_end(self, outputs: List[Any]) -> None:
         if self.config.USE_YOLO:
-            self.yolo_part.update_attr()
+            self.yolo_ema.update_attr(self.yolo_part)
             avg_yolo_loss = np.mean([d["yolo_loss"] for d in outputs])
             self.log("avg yolo loss", avg_yolo_loss, prog_bar=True)
 
@@ -302,7 +299,7 @@ class Model(pl.LightningModule):
             if self.yolo_trainer.calc_ni(batch_idx, epoch) % self.yolo_trainer.accumulate == 0:
                 optimizer.step()
                 optimizer.zero_grad()
-                self.yolo_part.update()
+                self.yolo_ema.update(self.yolo_part)
 
     def configure_optimizers(self):
         param_groups = []
