@@ -235,6 +235,11 @@ def train(hyp):
     model.gr = 1.0  # giou loss ratio (obj_loss = 1.0 or giou)
     model.class_weights = labels_to_class_weights(dataset.yolo_labels, nc).to(device)  # attach class weights
 
+    model.yolo_part.yolo_detector.nc = nc  # attach number of classes to model
+    model.yolo_part.yolo_detector.hyp = hyp  # attach hyperparameters to model
+    model.yolo_part.yolo_detector.gr = 1.0  # giou loss ratio (obj_loss = 1.0 or giou)
+    model.yolo_part.yolo_detector.class_weights = labels_to_class_weights(dataset.yolo_labels, nc).to(device)  # attach class weights
+
     # Model EMA
     ema = torch_utils.ModelEMA(model.yolo_part)
 
