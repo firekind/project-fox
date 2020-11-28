@@ -1,4 +1,5 @@
 import argparse
+from copy import deepcopy
 
 import torch.distributed as dist
 import torch.optim as optim
@@ -96,7 +97,7 @@ def train(hyp):
         opt.yolo_head_config_path,
         opt.yolo_detector_config_path,
         opt.yolo_detector_weights_path        
-    )
+    ).to(device)
 
     # Optimizer
     pg0, pg1, pg2 = [], [], []  # optimizer parameter groups
@@ -289,7 +290,7 @@ def train(hyp):
             midas_out, pred, planercnn_out = model(imgs)
 
             # Loss
-            loss, loss_items = compute_loss(pred, targets, model)
+            loss, loss_items = compute_loss(pred, targets, model.yolo_part.yolo_detector)
             if not torch.isfinite(loss):
                 print('WARNING: non-finite loss, ending training ', loss_items)
                 return results
@@ -306,7 +307,7 @@ def train(hyp):
             if ni % accumulate == 0:
                 optimizer.step()
                 optimizer.zero_grad()
-                ema.update(model)
+                ema.update(model.yolo_part)
 
             # Print
             mloss = (mloss * i + loss_items) / (i + 1)  # update mean losses
@@ -328,19 +329,22 @@ def train(hyp):
         scheduler.step()
 
         # Process epoch results
-        ema.update_attr(model)
+        ema.update_attr(model.yolo_part)
         final_epoch = epoch + 1 == epochs
         if not opt.notest or final_epoch:  # Calculate mAP
             is_coco = any([x in data for x in ['coco.data', 'coco2014.data', 'coco2017.data']]) and model.nc == 80
+            model_cp = deepcopy(model)
+            model_cp.yolo_part = ema.ema
             results, maps = test.test(cfg,
                                       data,
                                       batch_size=batch_size,
                                       imgsz=imgsz_test,
-                                      model=ema.ema,
+                                      model=model_cp,
                                       save_json=final_epoch and is_coco,
                                       single_cls=opt.single_cls,
                                       dataloader=testloader,
                                       multi_label=ni > n_burn)
+            del model_cp
 
         # Write
         with open(results_file, 'a') as f:
@@ -420,6 +424,10 @@ if __name__ == '__main__':
     parser.add_argument('--adam', action='store_true', help='use adam optimizer')
     parser.add_argument('--single-cls', action='store_true', help='train as single-class dataset')
     parser.add_argument('--freeze-layers', action='store_true', help='Freeze non-output layers')
+    parser.add_argument('--midas-weights-path', type=str, default="weights/midas.pt")
+    parser.add_argument('--yolo-head-config-path', type=str, default="config/yolov3-head.cfg")
+    parser.add_argument('--yolo-detector-config-path', type=str, default="config/yolov3-spp-detector.cfg")
+    parser.add_argument('--yolo-detector-weights-path', type=str, default="weights/yolo-detector.pt")
     opt = parser.parse_args()
     opt.weights = last if opt.resume and not opt.weights else opt.weights
     check_git_status()
