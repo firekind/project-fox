@@ -106,20 +106,20 @@ def train(model, config, loader, val_loader, device="cpu"):
 def train_step(model, batch, yolo_trainer, planercnn_trainer, config, batch_idx, epoch, device):
     imgs, midas_data, yolo_data, planercnn_data = batch
 
-    (
-        _,  # images,
-        image_metas,
-        _,  # rpn_match,
-        _,  # rpn_bbox,
-        gt_class_ids,
-        gt_boxes,
-        gt_masks,
-        gt_parameters,
-        _,  # gt_depth,
-        _,  # extrinsics,
-        _,  # gt_segmentation,
-        camera,
-    ) = zip(*planercnn_data)
+    # (
+    #     _,  # images,
+    #     image_metas,
+    #     _,  # rpn_match,
+    #     _,  # rpn_bbox,
+    #     gt_class_ids,
+    #     gt_boxes,
+    #     gt_masks,
+    #     gt_parameters,
+    #     _,  # gt_depth,
+    #     _,  # extrinsics,
+    #     _,  # gt_segmentation,
+    #     camera,
+    # ) = zip(*planercnn_data)
 
     # forward prop
     midas_out, yolo_out, planercnn_out = model(
@@ -155,7 +155,7 @@ def train_step(model, batch, yolo_trainer, planercnn_trainer, config, batch_idx,
     # midas loss
     midas_loss = rmse_loss(
         midas_out, midas_data[-1], letterbox_borders=yolo_data[-1]
-    )
+    ) if midas_data is not None else 0
 
     # total loss
     loss = (
