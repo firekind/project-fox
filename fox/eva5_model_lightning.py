@@ -230,6 +230,15 @@ class Model(pl.LightningModule):
             yolo_out, yolo_data, batch_idx, self.current_epoch
         )
 
+        optimizer = self.optimizers()
+        self.manual_backward(yolo_loss, optimizer)
+        if (
+            self.yolo_trainer.calc_ni(batch_idx, self.current_epoch) % self.yolo_trainer.accumulate
+            == 0
+        ):
+            self.manual_optimizer_step(optimizer)
+            self.yolo_ema.update(self.yolo_part)
+
         self.log("yolo loss", yolo_loss.item(), prog_bar=True)
         return {
             "loss": yolo_loss,
@@ -250,25 +259,6 @@ class Model(pl.LightningModule):
 
         avg_total_loss = np.mean([d["loss"].detach().cpu().numpy() for d in outputs])
         self.log("avg total loss", avg_total_loss, prog_bar=True)
-
-    def optimizer_step(
-        self,
-        epoch: int,
-        batch_idx: int,
-        optimizer: Optimizer,
-        optimizer_idx: int,
-        optimizer_closure: Optional[Callable],
-        on_tpu: bool,
-        using_native_amp: bool,
-        using_lbfgs: bool,
-    ) -> None:
-        if (
-            self.yolo_trainer.calc_ni(batch_idx, epoch) % self.yolo_trainer.accumulate
-            == 0
-        ):
-            optimizer.step(closure=optimizer_closure)
-            optimizer.zero_grad()
-            self.yolo_ema.update(self.yolo_part)
 
     def on_validation_epoch_start(self) -> None:
         if self.config.USE_YOLO:
@@ -415,3 +405,7 @@ class Model(pl.LightningModule):
 
         return optimizer
 
+    def get_progress_bar_dict(self):
+        prog_dict = super().get_progress_bar_dict()
+        prog_dict.pop("loss", None)
+        return prog_dict
