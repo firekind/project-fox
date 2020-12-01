@@ -161,13 +161,16 @@ class Model(nn.Module):
             # creating planercnn head
             self.planercnn_head = PlaneRCNNHead()
 
-    def forward(self, x, planercnn_data=None):
+    def forward(self, x, planercnn_data=None, yolo_ema=None):
         # forward proping midas
         l1, l2, l3, l4, midas_out = self.midas_net(x)
 
         # forward proping yolo
         if self.use_yolo:
-            yolo_out = self.yolo_part(l2)
+            if self.training:
+                yolo_out = self.yolo_part(l2)
+            else:
+                yolo_out = yolo_ema(l2)
         else:
             yolo_out = None
 
