@@ -170,10 +170,10 @@ class Model(pl.LightningModule):
                 nc,
             )
 
-            self.yolo_ema = ModelEMA(self.yolo_part)
-            self.is_yolo_ema_on_device = False
+            # self.yolo_ema = ModelEMA(self.yolo_part)
+            # self.is_yolo_ema_on_device = False
 
-    def forward(self, x):
+    def forward(self, x, yolo_ema=None):
         # forward proping midas
         l1, l2, l3, l4, midas_out = self.midas_net(x)
 
@@ -182,10 +182,11 @@ class Model(pl.LightningModule):
             if self.training:
                 yolo_out = self.yolo_part(l2)
             else:
-                if not self.is_yolo_ema_on_device:
-                    self.yolo_ema.ema = self.yolo_ema.ema.to(self.device)
-                    self.is_yolo_ema_on_device = True
-                yolo_out = self.yolo_ema.ema(l2)
+                # if not self.is_yolo_ema_on_device:
+                #     self.yolo_ema.ema = self.yolo_ema.ema.to(self.device)
+                #     self.is_yolo_ema_on_device = True
+                # yolo_out = self.yolo_ema.ema(l2)
+                yolo_out = yolo_ema(l2)
         else:
             yolo_out = None
 
