@@ -117,7 +117,8 @@ class PlaneRCNNHead(nn.Module):
 class Model(pl.LightningModule):
     def __init__(self, config, num_batches, num_classes, yolo_labels):
         super(Model, self).__init__()
-
+        self.save_hyperparameters()
+        
         self.config = config
         planercnn_config = config.planercnn_config
         yolo_config = config.yolo_config
