@@ -1,10 +1,9 @@
 from fox.yolov3.utils.torch_utils import ModelEMA
-from typing import Callable, Optional, List, Any
+from typing import Dict, List, Any
 
 import numpy as np
 import torch
 import torch.nn as nn
-from torch.optim import Optimizer
 import torch.optim as optim
 
 from fox.midas.midas.midas_net import MidasNet
@@ -289,6 +288,7 @@ class Model(pl.LightningModule):
 
         return metrics
 
+
     def validation_epoch_end(self, outputs: List[Any]) -> None:
         #############################
         # YoloV3
@@ -305,6 +305,16 @@ class Model(pl.LightningModule):
             self.log("yolo mean precision", mp)
             self.log("yolo mean recall", mr)
             self.log("yolo mean f1", mf1)
+
+    def on_test_epoch_start(self) -> None:
+        if self.config.USE_YOLO:
+            self.yolo_trainer.validation_epoch_start()
+
+    def test_step(self, batch, batch_idx):
+        return self.validation_step(batch, batch_idx)
+
+    def test_epoch_end(self, outputs: List[Any]) -> None:
+        self.validation_epoch_end(outputs)
 
     def configure_optimizers(self):
         param_groups = []
@@ -409,3 +419,11 @@ class Model(pl.LightningModule):
         prog_dict = super().get_progress_bar_dict()
         prog_dict.pop("loss", None)
         return prog_dict
+
+    def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        checkpoint.update({
+            "yolo_ema": self.yolo_ema.ema.state_dict()
+        })
+
+    def on_load_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        self.yolo_ema.ema.load_state_dict(checkpoint["yolo_ema"])
