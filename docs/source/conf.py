@@ -17,9 +17,10 @@
 
 # -- Project information -----------------------------------------------------
 
-project = 'Project Fox'
+project = 'Fox'
 copyright = '2020, Shyamant Achar'
 author = 'Shyamant Achar'
+html_show_sphinx = False
 
 
 # -- General configuration ---------------------------------------------------
