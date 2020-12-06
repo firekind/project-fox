@@ -65,4 +65,4 @@ The first hiccup was solved by implementing something akin to gradient accumulat
 
 As mentioned previously, the yolo and PlaneRCNN sections of the model were trained separately. This sped up the whole training process, and the checkpoint files could simply be merged to get the final set of pretrained weights.
 
-The training code can be found `here <https://github.com/firekind/project-fox/blob/master/fox/model.py>`_, the notebook that was used to train the Yolo section can be found `here <https://github.com/firekind/project-fox/blob/master/yolo_train.ipynb>`_, and the notebook that was used to train the PlaneRCNN section can be found here TODO: add link
+The training code can be found `here <https://github.com/firekind/project-fox/blob/master/fox/model.py>`_, the notebook that was used to train the Yolo section can be found `here <https://github.com/firekind/project-fox/blob/master/yolo_train.ipynb>`_, and the notebook that was used to train the PlaneRCNN section can be found `here <https://github.com/firekind/project-fox/blob/master/planercnn_train.ipynb>`_
