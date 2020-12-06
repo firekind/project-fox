@@ -23,3 +23,5 @@ And here are the plane detection results given by the model:
 .. figure:: ../res/images/planercnn-output.png
 
 |
+
+The results of plane detection are not that good, due to the fact that the model was trained on a few number of epochs (10).
