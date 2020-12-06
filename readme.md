@@ -6,9 +6,9 @@
 </div>
 
 <p align="center">
-    <!-- <a href="https://firekind.github.io/project-fox">
+    <a href="https://firekind.github.io/project-fox">
         <img src="https://img.shields.io/website-up-down-green-red/http/firekind.github.io/project-fox"/>
-    </a> -->
+    </a>
     <a href="https://github.com/firekind/project-fox/graphs/contributors" alt="Contributors">
         <img src="https://img.shields.io/github/contributors/firekind/project-fox" />
     </a>
