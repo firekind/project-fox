@@ -1,0 +1,413 @@
+
+
+
+<!DOCTYPE html>
+<!--[if IE 8]><html class="no-js lt-ie9" lang="en" > <![endif]-->
+<!--[if gt IE 8]><!--> <html class="no-js" lang="en" > <!--<![endif]-->
+<head>
+  <meta charset="utf-8">
+  
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <title>The Dataset &mdash; Fox  documentation</title>
+  
+
+  
+  
+  
+  
+
+  
+
+  
+  
+    
+
+  
+
+  <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+  <!-- <link rel="stylesheet" href="../_static/pygments.css" type="text/css" /> -->
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Training" href="training.html" />
+    <link rel="prev" title="The Model" href="model.html" /> 
+
+  
+  <script src="../_static/js/modernizr.min.js"></script>
+
+  <!-- Preload the theme fonts -->
+
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-book.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-Medium.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/FreightSans/freight-sans-medium-italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="../_static/fonts/IBMPlexMono/IBMPlexMono-SemiBold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+
+<!-- Preload the katex fonts -->
+
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Math-Italic.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Main-Bold.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size1-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size4-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size2-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Size3-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+<link rel="preload" href="https://cdn.jsdelivr.net/npm/katex@0.10.0/dist/fonts/KaTeX_Caligraphic-Regular.woff2" as="font" type="font/woff2" crossorigin="anonymous">
+</head>
+
+<div class="container-fluid header-holder tutorials-header" id="header-holder">
+  <div class="container">
+    <div class="header-container">
+      <a href= "../index.html">
+        <h1 class="header-logo" style="margin: 0px">
+          Fox
+        </h1>
+      </a>
+
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://github.com/firekind/project-fox">Github</a>
+          </li>
+        </ul>
+      </div>
+
+      <a class="main-menu-open-button" href="#" data-behavior="open-mobile-menu"></a>
+    </div>
+
+  </div>
+</div>
+
+
+<body class="pytorch-body">
+
+   
+
+    
+
+    <div class="table-of-contents-link-wrapper">
+      <span>Table of Contents</span>
+      <a href="#" class="toggle-table-of-contents" data-behavior="toggle-table-of-contents"></a>
+    </div>
+
+    <nav data-toggle="wy-nav-shift" class="pytorch-left-menu" id="pytorch-left-menu">
+      <div class="pytorch-side-scroll">
+        <div class="pytorch-menu pytorch-menu-vertical" data-spy="affix" role="navigation" aria-label="main navigation">
+          <div class="pytorch-left-menu-search">
+            
+
+            
+              
+              
+            
+
+            
+
+
+  
+
+
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search Docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+            
+          </div>
+
+          
+            
+            
+              
+            
+            
+              <p class="caption"><span class="caption-text">Contents</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="model.html">The Model</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">The Dataset</a></li>
+<li class="toctree-l1"><a class="reference internal" href="training.html">Training</a></li>
+<li class="toctree-l1"><a class="reference internal" href="results.html">Results</a></li>
+</ul>
+
+            
+          
+        </div>
+      </div>
+    </nav>
+
+    <div class="pytorch-container">
+      <div class="pytorch-page-level-bar" id="pytorch-page-level-bar">
+        <div class="pytorch-breadcrumbs-wrapper">
+          
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+<div role="navigation" aria-label="breadcrumbs navigation">
+
+  <ul class="pytorch-breadcrumbs">
+    
+      <li>
+        <a href="../index.html">
+          
+            Docs
+          
+        </a> &gt;
+      </li>
+
+        
+      <li>The Dataset</li>
+    
+    
+      <li class="pytorch-breadcrumbs-aside">
+        
+            
+            <a href="../_sources/pages/dataset.rst.txt" rel="nofollow"><img src="../_static/images/view-page-source-icon.svg"></a>
+          
+        
+      </li>
+    
+  </ul>
+
+  
+</div>
+        </div>
+
+        <div class="pytorch-shortcuts-wrapper" id="pytorch-shortcuts-wrapper">
+          Shortcuts
+        </div>
+      </div>
+
+      <section data-toggle="wy-nav-shift" id="pytorch-content-wrap" class="pytorch-content-wrap">
+        <div class="pytorch-content-left">
+          
+          <div class="rst-content">
+          
+            <div role="main" class="main-content" itemscope="itemscope" itemtype="http://schema.org/Article">
+             <article itemprop="articleBody" id="pytorch-article" class="pytorch-article">
+              
+  <div class="section" id="the-dataset">
+<h1>The Dataset<a class="headerlink" href="#the-dataset" title="Permalink to this headline">¶</a></h1>
+<div class="toctree-wrapper compound">
+</div>
+<p>To train this mammoth of a model, a mammoth of a dataset is also needed. The datasets from all three submodels - MiDAS, YoloV3 and PlaneRCNN - had to be combined.</p>
+<p>The first thought was to make use of pytorch’s <code class="docutils literal notranslate"><span class="pre">ConcatDataset</span></code>, but this was quickly discarded since it does not sync the three datasets.</p>
+<div class="section" id="midas-dataset">
+<h2>MiDAS Dataset<a class="headerlink" href="#midas-dataset" title="Permalink to this headline">¶</a></h2>
+<p>The MiDAS dataset had to contain the depth maps of all the input images. Inference was run using the original MiDAS repo and the generated depth maps were used as ground truths. Nothing too hard here.</p>
+</div>
+<div class="section" id="yolov3-dataset">
+<h2>YoloV3 Dataset<a class="headerlink" href="#yolov3-dataset" title="Permalink to this headline">¶</a></h2>
+<p>Using the knowledge gained during assignment 13, making use of the <code class="docutils literal notranslate"><span class="pre">LoadImagesAndLabels</span></code> dataset class from the YoloV3 repo took no effort (kinda). The code was slightly modified though, to return the letterbox padding extents as well, which will be used in the loss function later on. Also, any augmentations that the class did was turned off.</p>
+</div>
+<div class="section" id="planercnn-dataset">
+<h2>PlaneRCNN Dataset<a class="headerlink" href="#planercnn-dataset" title="Permalink to this headline">¶</a></h2>
+<p>This is where things got really messy. PlaneRCNN was trained on ScanNet, and the custom dataset that we are training on is completely different from ScanNet. The dataset classes in the PlaneRCNN repo made a lot of references to ScanNet in their code. So instead of tackling the dataset, the model was looked at.</p>
+<p>The model took quite a number of arguments during inference, being <code class="docutils literal notranslate"><span class="pre">image_metas</span></code>, <code class="docutils literal notranslate"><span class="pre">gt_class_ids</span></code>, <code class="docutils literal notranslate"><span class="pre">gt_boxes</span></code>, <code class="docutils literal notranslate"><span class="pre">gt_masks</span></code>, <code class="docutils literal notranslate"><span class="pre">gt_parameters</span></code> and <code class="docutils literal notranslate"><span class="pre">camera</span></code>. Moreover, the calculation of the loss depended on even more parameters, being <code class="docutils literal notranslate"><span class="pre">rpn_match</span></code>, <code class="docutils literal notranslate"><span class="pre">rpn_bbox</span></code>, <code class="docutils literal notranslate"><span class="pre">rpn_class_logits</span></code>, <code class="docutils literal notranslate"><span class="pre">rpn_pred_bbox</span></code>, <code class="docutils literal notranslate"><span class="pre">target_class_ids</span></code>, <code class="docutils literal notranslate"><span class="pre">mrcnn_class_logits</span></code>, <code class="docutils literal notranslate"><span class="pre">target_deltas</span></code>, <code class="docutils literal notranslate"><span class="pre">mrcnn_bbox</span></code>, <code class="docutils literal notranslate"><span class="pre">target_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">mrcnn_mask</span></code>, <code class="docutils literal notranslate"><span class="pre">target_parameters</span></code> and <code class="docutils literal notranslate"><span class="pre">mrcnn_parameters</span></code>. So the source of all these parameters had to be found out.</p>
+<p>As luck would have had it, the sources of all those gazillion parameters were just three things, the input image, the segmentation / mask and the parameters. Now the sources of the segmentation / mask and the parameters had to be figured out. It turns out that the parameters are given during inference of the original PlaneRCNN, however, the segmentation / mask was not that simple to obtain from the inferences generated from the original PlaneRCNN model.</p>
+<p>The PlaneRCNN repo gave a hint on how the segmentation map should be like:</p>
+<blockquote>
+<div><p><em>“…In our implementation, we use one 2D segmentation map where pixels with value i belong to the ith plane in the list.”</em></p>
+</div></blockquote>
+<p>This would mean that if PlaneRCNN detects 15 planes, there would be 15 masks, and the 2D segmentation map should be constructed in such a way that the 0th plane should have all 0’s as its mask value in the segmentation map, the 1st plane should have all 1’s as its mask value in the segmentation map and so on.</p>
+<p>Diving into the PlaneRCNN code a bit more, the generated <code class="docutils literal notranslate"><span class="pre">masks</span></code> during inference contain the mask information as mentioned above, and this array was saved as an .npy file during inference. Now another problem cropped up. Each of these .npy files were around an average of 20mb, which would mean that the PlaneRCNN dataset would be around 20 * 3000 = 60000 mb = 60gb!</p>
+<p>The huge size of each faile was due to the fact that if the PlaneRCNN model detected 15 planes, the array stored in the .npy file would have a shape of (P, H, W) where P is the number of planes (here 15), H is the height of the image, and W is the width. This discovery further soldified the hypothesis that was made after reading the hint in the PlaneRCNN repo. Now the question was how to reduce this file size. Surprisingly, the answer came from an unexpected source: ScanNet.</p>
+<p>ScanNet’s segmentation maps were an RGB image in which each plane was denoted with a color. So converting the (P, H, W) array into an RGB image would save a huge amount of space. After a bit of research into representations of RGB images as integers, the following three functions were used to convert to and fro between the .npy file and the segmentation RGB image.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="k">def</span> <span class="nf">masks_to_image</span><span class="p">(</span><span class="n">masks</span><span class="p">):</span>
+    <span class="c1"># shape of masks should be (H, W, N)</span>
+    <span class="c1"># toRGB = lambda x: (x // 256 // 256 % 256, x // 256 % 256, x % 256)</span>
+    <span class="n">toRGB</span> <span class="o">=</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="p">(</span><span class="n">x</span> <span class="o">&gt;&gt;</span> <span class="mi">16</span> <span class="o">&amp;</span> <span class="mi">255</span><span class="p">,</span> <span class="n">x</span> <span class="o">&gt;&gt;</span> <span class="mi">8</span> <span class="o">&amp;</span> <span class="mi">255</span><span class="p">,</span> <span class="n">x</span> <span class="o">&amp;</span> <span class="mi">255</span><span class="p">)</span>
+    <span class="n">max_val</span> <span class="o">=</span> <span class="mi">16777215</span>
+
+    <span class="n">step</span> <span class="o">=</span> <span class="n">max_val</span> <span class="o">//</span> <span class="p">(</span><span class="n">masks</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">masks</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">masks</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="mi">3</span><span class="p">),</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="n">masks</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">img</span><span class="p">[</span><span class="n">masks</span><span class="p">[:,</span> <span class="p">:,</span> <span class="n">i</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="n">toRGB</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="n">step</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">img</span> <span class="c1"># (H, W, C)</span>
+
+<span class="k">def</span> <span class="nf">image_to_mask</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">num_masks</span><span class="p">):</span>
+    <span class="c1"># img shape should be (H, W, C) and type should be int</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="n">max_val</span> <span class="o">=</span> <span class="mi">16777215</span>
+    <span class="n">step</span> <span class="o">=</span> <span class="n">max_val</span> <span class="o">//</span> <span class="n">num_masks</span>
+    <span class="k">return</span> <span class="p">((</span><span class="n">img</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">256</span> <span class="o">*</span> <span class="mi">256</span> <span class="o">+</span> <span class="n">img</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">1</span><span class="p">]</span> <span class="o">*</span> <span class="mi">256</span> <span class="o">+</span> <span class="n">img</span><span class="p">[:,</span> <span class="p">:,</span> <span class="mi">2</span><span class="p">])</span> <span class="o">//</span> <span class="n">step</span><span class="p">)</span> <span class="o">-</span> <span class="mi">1</span>
+
+<span class="k">def</span> <span class="nf">image_to_masks</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">num_masks</span><span class="p">):</span>
+    <span class="c1"># img shape should be (H, W, C) and type should be int</span>
+    <span class="n">img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="n">m</span> <span class="o">=</span> <span class="n">image_to_mask</span><span class="p">(</span><span class="n">img</span><span class="p">,</span> <span class="n">num_masks</span><span class="p">)</span>
+    <span class="n">masks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">full</span><span class="p">((</span><span class="n">num_masks</span><span class="p">,</span> <span class="n">m</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">m</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]),</span> <span class="n">fill_value</span><span class="o">=</span><span class="mi">0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int32</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_masks</span><span class="p">):</span>
+        <span class="n">masks</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">m</span> <span class="o">==</span> <span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+
+    <span class="k">return</span> <span class="n">masks</span> <span class="c1"># (N, H, W)</span>
+</pre></div>
+</div>
+<p>the function <code class="docutils literal notranslate"><span class="pre">masks_to_image</span></code> converted the .npy file contents to a RGB segmentation image, <code class="docutils literal notranslate"><span class="pre">image_to_mask</span></code> converted the RGB segmentation image to the format specified in the hint, and the <code class="docutils literal notranslate"><span class="pre">image_to_masks</span></code> function converted the RGB segmentation image back into the .npy file contents.The PlaneRCNN inference code was changed to use these functions instead. This lead to a huge decrease in the file size, from ~20mb to a couple of kilobytes. This <a class="reference external" href="https://github.com/firekind/project-fox/blob/master/test/planercnn-dataset-generation.ipynb">notebook</a> was used to generate the dataset for planercnn.</p>
+<div class="align-center figure" id="id1">
+<img alt="../_images/planercnn-seg-img-eg.png" src="../_images/planercnn-seg-img-eg.png" />
+<p class="caption"><span class="caption-text">Example of a segmentation image generated by PlaneRCNN and the above code.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</div>
+<p>Now since that was was dealt with, the PlaneRCNN dataset code (specifically, the <code class="docutils literal notranslate"><span class="pre">PlaneDatasetSingle</span></code> class), was read through and the ScanNet related code was removed. Once done, the dataset was tested and it worked.</p>
+</div>
+</div>
+
+
+             </article>
+             
+            </div>
+            <footer>
+  
+    <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
+      
+        <a href="training.html" class="btn btn-neutral float-right" title="Training" accesskey="n" rel="next">Next <img src="../_static/images/chevron-right-orange.svg" class="next-page"></a>
+      
+      
+        <a href="model.html" class="btn btn-neutral" title="The Model" accesskey="p" rel="prev"><img src="../_static/images/chevron-right-orange.svg" class="previous-page"> Previous</a>
+      
+    </div>
+  
+
+  
+
+    <hr>
+
+  
+
+  <div role="contentinfo">
+    <p>
+        &copy; Copyright 2020, Shyamant Achar.
+
+    </p>
+  </div> 
+
+</footer>
+
+          </div>
+        </div>
+
+        <div class="pytorch-content-right" id="pytorch-content-right">
+          <div class="pytorch-right-menu" id="pytorch-right-menu">
+            <div class="pytorch-side-scroll" id="pytorch-side-scroll-right">
+              <ul>
+<li><a class="reference internal" href="#">The Dataset</a><ul>
+<li><a class="reference internal" href="#midas-dataset">MiDAS Dataset</a></li>
+<li><a class="reference internal" href="#yolov3-dataset">YoloV3 Dataset</a></li>
+<li><a class="reference internal" href="#planercnn-dataset">PlaneRCNN Dataset</a></li>
+</ul>
+</li>
+</ul>
+
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+  
+
+
+  
+
+     
+       <script type="text/javascript" id="documentation_options" data-url_root="../" src="../_static/documentation_options.js"></script>
+         <script src="../_static/jquery.js"></script>
+         <script src="../_static/underscore.js"></script>
+         <script src="../_static/doctools.js"></script>
+         <script src="../_static/language_data.js"></script>
+     
+
+  
+
+  <script type="text/javascript" src="../_static/js/vendor/popper.min.js"></script>
+  <script type="text/javascript" src="../_static/js/vendor/bootstrap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/list.js/1.5.0/list.min.js"></script>
+  <script type="text/javascript" src="../_static/js/theme.js"></script>
+
+  <script type="text/javascript">
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+  <!-- Begin Footer -->
+
+  <div class="container-fluid docs-tutorials-resources" id="docs-tutorials-resources">
+    <div class="container">
+      <p>
+        Built with Sphinx and the 
+        <a href="https://github.com/pytorch/pytorch_sphinx_theme">pytorch sphinx theme</a>
+      </p>
+    </div>
+  </div>
+
+  <!-- End Footer -->
+
+  <!-- Begin Mobile Menu -->
+
+  <div class="mobile-main-menu">
+    <div class="container-fluid">
+      <div class="container">
+        <div class="mobile-main-menu-header-container">
+          <a class="header-logo" href="../index.html">
+            Fox
+          </a>
+          <a class="main-menu-close-button" href="#" data-behavior="close-mobile-menu"></a>
+        </div>
+      </div>
+    </div>
+
+    <div class="mobile-main-menu-links-container">
+      <div class="main-menu">
+        <ul>
+          <li>
+            <a href="https://github.com/firekind/project-fox">Github</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- End Mobile Menu -->
+
+  <script type="text/javascript" src="../_static/js/vendor/anchor.min.js"></script>
+
+  <script type="text/javascript">
+    $(document).ready(function() {
+      mobileMenu.bind();
+      mobileTOC.bind();
+      pytorchAnchors.bind();
+      sideMenus.bind();
+      scrollToAnchor.bind();
+      highlightNavigation.bind();
+      mainMenuDropdown.bind();
+      filterTags.bind();
+
+      // Add class to links that have code blocks, since we cannot create links in code blocks
+      $("article.pytorch-article a span.pre").each(function(e) {
+        $(this).closest("a").addClass("has-code");
+      });
+    })
+  </script>
+</body>
+</html>
