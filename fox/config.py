@@ -104,6 +104,9 @@ class PlaneRCNNOptions:
     warpingWeight: float = 0.1
     convType: str = "2"
     dataset: str = '' # used in planercnn's config
+    # remember to remove these later:
+    test_dir: str = "test"
+    debug: bool = False
 
     def __init__(self, epochs, batch_size, planercnn_lr = 1e-5, **kwargs):
         self.numEpochs = epochs
@@ -171,6 +174,7 @@ class Config:
     PLANERCNN_HEAD_LR = 1e-4
     USE_YOLO = True
     USE_PLANERCNN = True
+    LOG_RES_EVERY_N_BATCHES = 2
 
     yolo_config: YoloV3Config
     midas_config: MidasConfig

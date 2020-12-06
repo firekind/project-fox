@@ -88,7 +88,7 @@ class PlaneRCNNDataset(torch.utils.data.Dataset):
 
         for plane_idx, _ in enumerate(planes):
             m = segmentation == plane_idx
-            if m.sum() < 1:
+            if m.max() == False:  # faster than doing m.sum() > 1
                 continue
 
             instance_masks.append(m)
@@ -208,6 +208,7 @@ class MidasDataset(torch.utils.data.Dataset):
 
         self.samples = []
         self.img_path_to_idx = {}
+
         for i, f in enumerate(os.listdir(self.images_path)):
             image_path = os.path.join(self.images_path, f)
             depth_path = os.path.join(self.depth_path, os.path.splitext(f)[0] + ".png")
@@ -262,9 +263,8 @@ class ComboDataset(torch.utils.data.Dataset):
             label_files_path=data_dict["labels"],
         )
 
-        if train:
-            self.midas_dataset = MidasDataset(config)
-            self.planercnn_dataset = PlaneRCNNDataset(config.planercnn_config)
+        self.midas_dataset = MidasDataset(config)
+        self.planercnn_dataset = PlaneRCNNDataset(config.planercnn_config)
 
         # transform - using midas mean and std values
         self.transform = A.Compose(
@@ -285,14 +285,13 @@ class ComboDataset(torch.utils.data.Dataset):
         # getting image path from yolo data
         path = os.path.abspath(yolo_data[-3])
         
-        if self.train:
-            # getting midas data
-            midas_data = self.midas_dataset.get_image(path)
+        # getting midas data
+        midas_data = self.midas_dataset.get_image(path)
 
+        if self.config.USE_PLANERCNN:
             # getting planercnn data
             planercnn_data = self.planercnn_dataset.get_image(path)
         else:
-            midas_data = None
             planercnn_data = None
 
         # getting input image from yolo
@@ -304,7 +303,7 @@ class ComboDataset(torch.utils.data.Dataset):
         # transforming
         img = self.transform(image=ToNumpy(img))["image"]
 
-        return img, midas_data, yolo_data, planercnn_data
+        return torch.from_numpy(img.transpose(2, 0, 1)), midas_data, yolo_data, planercnn_data
 
     def __len__(self):
         return len(self.yolo_dataset)
@@ -322,7 +321,7 @@ class ComboDataset(torch.utils.data.Dataset):
             midas_data = default_collate(midas_data)
 
         return (
-            torch.tensor(orig_img).permute(0, 3, 1, 2),
+            torch.stack(orig_img),
             midas_data,
             (
                 torch.stack(img, 0),

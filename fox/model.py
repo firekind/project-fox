@@ -1,24 +1,28 @@
-import enum
-from typing import Any, List, Callable, Optional
+from fox.yolov3.utils.torch_utils import ModelEMA
+from typing import Dict, List, Any
 
 import numpy as np
-import pytorch_lightning as pl
 import torch
-from torch.nn.modules.batchnorm import BatchNorm2d
-import torch.optim as optim
 import torch.nn as nn
-from torch.optim import Optimizer
-from torch.optim.lr_scheduler import LambdaLR
+import torch.optim as optim
 
-from .losses import rmse_loss
-from .midas.midas.midas_net import MidasNet
-from .planercnn.eva5_helper import PlaneRCNNTrainer
-from .planercnn.models.model import MaskRCNN
-from .planercnn.models.refinement_net import RefineModel
-from .yolov3.eva5_helper import YoloTrainer
-from .yolov3.models import Darknet, create_modules
-from .yolov3.utils.parse_config import parse_data_cfg, parse_model_cfg
-from .yolov3.utils.utils import labels_to_class_weights
+from fox.midas.midas.midas_net import MidasNet
+from fox.planercnn.models.model import MaskRCNN
+from fox.planercnn.models.refinement_net import RefineModel
+from fox.planercnn.visualize_utils import visualizeBatchPair
+from fox.yolov3.eva5_helper import YoloTrainer
+from fox.yolov3.models import Darknet, create_modules
+from fox.yolov3.utils.parse_config import parse_data_cfg, parse_model_cfg
+from fox.yolov3.utils.utils import (
+    labels_to_class_weights,
+    non_max_suppression,
+    output_to_target,
+)
+from fox.utils import plot_yolo_bbox, construct_midas_depth, visualize_planercnn, visualize_planercnn_batch
+from fox.losses import rmse_loss
+from fox.planercnn.eva5_helper import PlaneRCNNTrainer
+
+import pytorch_lightning as pl
 
 
 class YoloHead(nn.Module):
@@ -48,6 +52,32 @@ class YoloHead(nn.Module):
             out.append(x if self.routs[i] else [])
 
         return x
+
+
+class YoloPart(nn.Module):
+    def __init__(
+        self,
+        yolo_head_config_path,
+        yolo_detector_config_path,
+        yolo_detector_weights_path,
+    ):
+        super(YoloPart, self).__init__()
+
+        # creating the head
+        self.yolo_head = YoloHead(yolo_head_config_path)
+
+        # creating detector
+        self.yolo_detector = Darknet(yolo_detector_config_path)
+
+        # loading detector weights
+        if yolo_detector_weights_path is not None:
+            self.yolo_detector.load_state_dict(
+                torch.load(yolo_detector_weights_path)["model"], strict=False
+            )
+
+    def forward(self, x):
+        yolo_head_out = self.yolo_head(x)
+        return self.yolo_detector(yolo_head_out, x)
 
 
 class PlaneRCNNHeadSegment(nn.Module):
@@ -93,17 +123,14 @@ class PlaneRCNNHead(nn.Module):
 
 
 class Model(pl.LightningModule):
-    def __init__(self, config, yolo_labels, nb):
+    def __init__(self, config, num_batches, num_classes, yolo_labels):
         super(Model, self).__init__()
-
-        assert (
-            config.USE_YOLO != False or config.USE_PLANERCNN != False
-        ), "Use one of yolo or planercnn, or both."
+        self.save_hyperparameters()
 
         self.config = config
-        midas_config = config.midas_config
-        yolo_config = config.yolo_config
         planercnn_config = config.planercnn_config
+        yolo_config = config.yolo_config
+        midas_config = config.midas_config
 
         #############################
         # MIDAS
@@ -112,7 +139,6 @@ class Model(pl.LightningModule):
         # creating midas model
         self.midas_net = MidasNet(midas_config.WEIGHTS_PATH)
 
-        # freezing midas model
         if midas_config.FREEZE:
             for param in self.midas_net.parameters():
                 param.requires_grad = False
@@ -122,34 +148,34 @@ class Model(pl.LightningModule):
             # YoloV3
             #############################
 
-            # getting number of classes
-            data_dict = parse_data_cfg(yolo_config.opt.data)
-            nc = 1 if yolo_config.opt.single_cls else int(data_dict["classes"])
+            self.yolo_part = YoloPart(
+                yolo_config.HEAD_CONFIG_PATH,
+                yolo_config.DETECTOR_CONFIG_PATH,
+                yolo_config.DETECTOR_WEIGHTS_PATH,
+            )
+            self.yolo_part.yolo_detector.nc = (
+                num_classes  # attach number of classes to model
+            )
+            self.yolo_part.yolo_detector.hyp = (
+                yolo_config.hyp
+            )  # attach hyperparameters to model
+            self.yolo_part.yolo_detector.gr = (
+                1.0  # giou loss ratio (obj_loss = 1.0 or giou)
+            )
+            self.yolo_part.yolo_detector.class_weights = labels_to_class_weights(
+                yolo_labels, num_classes
+            )  # attach class weights
 
-            # creating the head
-            self.yolo_head = YoloHead(yolo_config.HEAD_CONFIG_PATH)
-
-            # creating detector
-            self.yolo_detector = Darknet(yolo_config.DETECTOR_CONFIG_PATH)
-            self.yolo_detector.gr = yolo_config.opt.gr
-            self.yolo_detector.hyp = yolo_config.hyp
-            self.yolo_detector.nc = nc
-            self.yolo_detector.class_weights = labels_to_class_weights(yolo_labels, nc)
-
-            # loading detector weights
-            if yolo_config.DETECTOR_WEIGHTS_PATH is not None:
-                self.yolo_detector.load_state_dict(
-                    torch.load(yolo_config.DETECTOR_WEIGHTS_PATH)["model"], strict=False
-                )
-
-            # creating trainer
             self.yolo_trainer = YoloTrainer(
-                self.yolo_detector,
+                self.yolo_part.yolo_detector,
                 yolo_config.hyp,
                 yolo_config.opt,
-                nb,  # number of batches
-                nc,
+                num_batches,
+                num_classes,
             )
+
+            self.yolo_ema = ModelEMA(self.yolo_part)
+            self.is_ema_on_device = False
 
         if config.USE_PLANERCNN:
             #############################
@@ -175,19 +201,20 @@ class Model(pl.LightningModule):
             # creating planercnn head
             self.planercnn_head = PlaneRCNNHead()
 
-            # creating trainer
             self.planercnn_trainer = PlaneRCNNTrainer(
                 planercnn_config, self.planercnn_refine_model
             )
 
-    def forward(self, x, planercnn_data=None):
+    def forward(self, x, planercnn_data=None, yolo_ema=None):
         # forward proping midas
         l1, l2, l3, l4, midas_out = self.midas_net(x)
 
         # forward proping yolo
         if self.config.USE_YOLO:
-            yolo_head_out = self.yolo_head(l2)
-            yolo_out = self.yolo_detector(yolo_head_out, l2)
+            if self.training:
+                yolo_out = self.yolo_part(l2)
+            else:
+                yolo_out = yolo_ema(l2)
         else:
             yolo_out = None
 
@@ -196,7 +223,7 @@ class Model(pl.LightningModule):
             planercnn_out = self.planercnn_model.predict_on_batch(
                 [l1, l2, l3, l4],
                 planercnn_data,
-                mode="training_detection",
+                mode="training_detection" if self.training else "inference_detection",
                 use_nms=2,
                 use_refinement="refinement"
                 in self.config.planercnn_config.options.suffix,
@@ -207,44 +234,45 @@ class Model(pl.LightningModule):
         return midas_out, yolo_out, planercnn_out
 
     def training_step(self, batch, batch_idx):
-        # getting data
         imgs, midas_data, yolo_data, planercnn_data = batch
 
-        # transfering planercnn data to device
-        for i, sample in enumerate(planercnn_data):
-            for j, data in enumerate(sample):
-                planercnn_data[i][j] = data.to(self.device)
+        if self.config.USE_PLANERCNN:
+            for i, sample in enumerate(planercnn_data):
+                for j, data in enumerate(sample):
+                    planercnn_data[i][j] = data.to(self.device)
 
-        (
-            _,  # images,
-            image_metas,
-            _,  # rpn_match,
-            _,  # rpn_bbox,
-            gt_class_ids,
-            gt_boxes,
-            gt_masks,
-            gt_parameters,
-            _,  # gt_depth,
-            _,  # extrinsics,
-            _,  # gt_segmentation,
-            camera,
-        ) = zip(*planercnn_data)
+            (
+                _,  # images,
+                image_metas,
+                _,  # rpn_match,
+                _,  # rpn_bbox,
+                gt_class_ids,
+                gt_boxes,
+                gt_masks,
+                gt_parameters,
+                _,  # gt_depth,
+                _,  # extrinsics,
+                _,  # gt_segmentation,
+                camera,
+            ) = zip(*planercnn_data)
 
-        # forward prop
+            planercnn_forward_prop_data = zip(
+                image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera
+            )
+        else:
+            planercnn_forward_prop_data = None
+
         midas_out, yolo_out, planercnn_out = self(
-            imgs,
-            zip(image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera)
-            if self.config.USE_PLANERCNN
-            else None,
+            imgs, planercnn_data=planercnn_forward_prop_data
         )
 
-        # after forward prop (yolo loss)
-        yolo_loss, yolo_loss_items = (
+        # yolo
+        yolo_loss, _ = (
             self.yolo_trainer.post_train_step(
                 yolo_out, yolo_data, batch_idx, self.current_epoch
             )
             if self.config.USE_YOLO
-            else 0
+            else (0, 0)
         )
 
         # planercnn loss
@@ -273,42 +301,35 @@ class Model(pl.LightningModule):
             + self.config.PLANERCNN_LOSS_WEIGHT * planercnn_loss
         )
 
-        self.manual_backward(loss, self.optimizers())
+        # backward and stepping optimizer
+        optimizer = self.optimizers()
+        self.manual_backward(loss, optimizer)
+        if (
+            self.config.USE_YOLO
+            and self.yolo_trainer.calc_ni(batch_idx, self.current_epoch)
+            % self.yolo_trainer.accumulate
+            == 0
+        ):
+            self.manual_optimizer_step(optimizer)
+            self.yolo_ema.update(self.yolo_part)
+        else:
+            self.manual_optimizer_step(optimizer)
+
+        metrics = {"loss": loss, "midas_loss": midas_loss.item()}
+        self.log("total loss", loss.item(), prog_bar=True)
+        self.log("midas loss", midas_loss.item(), prog_bar=True)
 
         if self.config.USE_YOLO:
-            if self.yolo_trainer.calc_ni(batch_idx, self.current_epoch) % self.yolo_trainer.accumulate:
-                    self.optimizers().step()
-                    self.optimizers().zero_grad()
-                    self.yolo_trainer.update_ema()
-
-        # logging
-        self.log("total loss", loss, prog_bar=True)
-        self.log("midas loss", midas_loss, prog_bar=True)
-        if self.config.USE_YOLO:
-            self.log("yolo loss", yolo_loss, prog_bar=True)
+            self.log("yolo loss", yolo_loss.item(), prog_bar=True)
+            metrics.update({"yolo_loss": yolo_loss.item()})
         if self.config.USE_PLANERCNN:
-            self.log("planercnn loss", planercnn_loss, prog_bar=True)
-
-        # metrics to return
-        metrics = {
-            "loss": loss,
-            "midas_loss": midas_loss.detach().cpu().numpy(),
-        }
-
-        if self.config.USE_YOLO:
-            metrics.update(
-                {"yolo_loss": yolo_loss.detach().cpu().numpy(),}
-            )
-        if self.config.USE_PLANERCNN:
-            metrics.update(
-                {"planercnn_loss": planercnn_loss.detach().cpu().numpy(),}
-            )
+            self.log("planercnn loss", planercnn_loss.item(), prog_bar=True)
+            metrics.update({"planercnn_loss": planercnn_loss.item()})
 
         return metrics
 
     def training_epoch_end(self, outputs: List[Any]) -> None:
         if self.config.USE_YOLO:
-            self.yolo_trainer.train_epoch_end()
             avg_yolo_loss = np.mean([d["yolo_loss"] for d in outputs])
             self.log("avg yolo loss", avg_yolo_loss, prog_bar=True)
 
@@ -325,16 +346,48 @@ class Model(pl.LightningModule):
     def on_validation_epoch_start(self) -> None:
         if self.config.USE_YOLO:
             self.yolo_trainer.validation_epoch_start()
+            self.yolo_ema.update_attr(self.yolo_part)
 
     def validation_step(self, batch, batch_idx):
-        imgs, _, yolo_data, _ = batch
-        _, yolo_out, _ = self(imgs)
-
+        imgs, _, yolo_data, planercnn_data = batch
         metrics = {}
 
-        #############################
-        # YoloV3
-        #############################
+        if self.config.USE_YOLO and not self.is_ema_on_device:
+            self.yolo_ema.ema = self.yolo_ema.ema.to(self.device)
+            self.is_ema_on_device = True
+
+        if self.config.USE_YOLO:
+            ema = self.yolo_ema.ema
+        else:
+            ema = None
+        
+        if self.config.USE_PLANERCNN:
+            for i, sample in enumerate(planercnn_data):
+                for j, data in enumerate(sample):
+                    planercnn_data[i][j] = data.to(self.device)
+
+            (
+                _,  # images,
+                image_metas,
+                _,  # rpn_match,
+                _,  # rpn_bbox,
+                gt_class_ids,
+                gt_boxes,
+                gt_masks,
+                gt_parameters,
+                _,  # gt_depth,
+                _,  # extrinsics,
+                _,  # gt_segmentation,
+                camera,
+            ) = zip(*planercnn_data)
+
+            planercnn_forward_prop_data = zip(
+                image_metas, gt_class_ids, gt_boxes, gt_masks, gt_parameters, camera
+            )
+        else:
+            planercnn_forward_prop_data = None
+
+        midas_out, yolo_out, planercnn_out = self(imgs, planercnn_data = planercnn_forward_prop_data, yolo_ema=ema)
 
         if self.config.USE_YOLO:
             yolo_losses = self.yolo_trainer.validation_step(
@@ -344,8 +397,47 @@ class Model(pl.LightningModule):
                 batch_idx,
                 self.current_epoch,
             )
-            self.log("yolo_val_loss", yolo_losses.sum())
-            metrics.update({"yolo_val_losses": yolo_losses.cpu().numpy()})
+
+            metrics.update({"yolo_val_losses": yolo_losses.sum().item()})
+
+        # logging intermediate results
+        if batch_idx % self.config.LOG_RES_EVERY_N_BATCHES:
+            # logging yolo outputs
+            if self.config.USE_YOLO:
+                inf_out, _ = yolo_out
+                output = non_max_suppression(
+                    inf_out,
+                    conf_thres=self.config.yolo_config.opt.conf_thres,
+                    iou_thres=self.config.yolo_config.opt.iou_thres,
+                )
+                res_img = plot_yolo_bbox(
+                    yolo_data[0],
+                    output_to_target(output, imgs.shape[-1], imgs.shape[-2]),
+                    names=["hardhat", "vest", "mask", "boots"],
+                )
+
+                self.logger.experiment.add_image(
+                    "yolo outputs", res_img, self.current_epoch, dataformats="HWC"
+                )
+
+            if self.config.USE_PLANERCNN:
+                self.logger.experiment.add_images(
+                    "planercnn output",
+                    visualize_planercnn_batch(
+                        self.config.planercnn_config,
+                        self.planercnn_trainer.get_input_pair_for_batch(planercnn_data),
+                        self.planercnn_trainer.get_detection_pair_for_batch(planercnn_data, planercnn_out)
+                    ),
+                    self.current_epoch, 
+                    dataformats="NHWC"
+                )
+
+            # logging midas outputs
+            self.logger.experiment.add_images(
+                "midas outputs",
+                construct_midas_depth(midas_out.cpu()).unsqueeze(1),
+                self.current_epoch,
+            )
 
         return metrics
 
@@ -357,8 +449,7 @@ class Model(pl.LightningModule):
         if self.config.USE_YOLO:
             # `mAPs` is avg. precision for each class, `mAP` is total mAP
             (mp, mr, mAP, mf1), mAPs = self.yolo_trainer.validation_epoch_end()
-            avg_yolo_val_loss = np.mean([d["yolo_val_losses"].sum() for d in outputs])
-            print(mAP)
+            avg_yolo_val_loss = np.mean([d["yolo_val_losses"] for d in outputs])
 
             # log stuff
             self.log("avg yolo val loss", avg_yolo_val_loss, prog_bar=True)
@@ -373,7 +464,7 @@ class Model(pl.LightningModule):
         if self.config.USE_YOLO:
             # yolo param groups
             pg0, pg1, pg2 = [], [], []  # optimizer parameter groups
-            for k, v in dict(self.yolo_detector.named_parameters()).items():
+            for k, v in dict(self.yolo_part.named_parameters()).items():
                 if ".bias" in k:
                     pg2 += [v]  # biases
                 elif "Conv2d.weight" in k:
@@ -405,13 +496,6 @@ class Model(pl.LightningModule):
                     "lr": hyp["lr0"],
                     "momentum": hyp["momentum"],
                     "nesterov": True,
-                }
-            )
-            param_groups.append(
-                {
-                    "params": self.yolo_head.parameters(),
-                    "lr": self.config.YOLO_HEAD_LR,
-                    "momentum": 0.9,
                 }
             )
 
@@ -456,13 +540,14 @@ class Model(pl.LightningModule):
             )
 
         # midas param groups
-        param_groups.append(
-            {
-                "params": self.midas_net.parameters(),
-                "lr": self.config.MIDAS_LR,
-                "momentum": 0.9,
-            }
-        )
+        if not self.config.midas_config.FREEZE:
+            param_groups.append(
+                {
+                    "params": self.midas_net.parameters(),
+                    "lr": self.config.MIDAS_LR,
+                    "momentum": 0.9,
+                }
+            )
 
         # creating optimizer
         optimizer = optim.SGD(param_groups)
@@ -472,3 +557,16 @@ class Model(pl.LightningModule):
             self.yolo_trainer.set_optimizer(optimizer)
 
         return optimizer
+
+    def get_progress_bar_dict(self):
+        prog_dict = super().get_progress_bar_dict()
+        prog_dict.pop("loss", None)
+        return prog_dict
+
+    def on_save_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        if self.config.USE_YOLO:
+            checkpoint.update({"yolo_ema": self.yolo_ema.ema.state_dict()})
+
+    def on_load_checkpoint(self, checkpoint: Dict[str, Any]) -> None:
+        if self.config.USE_YOLO:
+            self.yolo_ema.ema.load_state_dict(checkpoint["yolo_ema"])
