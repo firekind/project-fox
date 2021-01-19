@@ -49,7 +49,6 @@ data
 │   ├── custom.names
 │   ├── images.shapes
 │   ├── labels
-│   ├── labels.npy
 │   ├── test.shapes
 │   ├── test.txt
 │   ├── train.shapes
