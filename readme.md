@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/github/languages/count/firekind/project-fox">
 </p>
 
-A object detection, depth estimation and plane surface detection model, trained on a custom dataset containing images of hardhats, vests, masks and boots. Look at the documentation for more details.
+An object detection, depth estimation and plane surface detection model, trained on a custom dataset containing images of hardhats, vests, masks and boots. Look at the documentation for more details.
 
 ## Setup
 
